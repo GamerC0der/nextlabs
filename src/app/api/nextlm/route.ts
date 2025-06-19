@@ -55,6 +55,12 @@ You can't open videos, URLs, or play media. Tell the user if they ask you to. No
 
     const encoder = new TextEncoder();
     
+    // Generate fake IDs
+    const generateId = () => `req_${Math.random().toString(36).substr(2, 9)}${Date.now().toString(36)}`;
+    const generateChoiceId = () => `choice_${Math.random().toString(36).substr(2, 6)}`;
+    
+    const requestId = generateId();
+    
     const readable = new ReadableStream({
       async start(controller) {
         try {
@@ -62,11 +68,34 @@ You can't open videos, URLs, or play media. Tell the user if they ask you to. No
             const content = chunk.choices[0]?.delta?.content;
             if (content) {
               const data = `data: ${JSON.stringify({ 
-                choices: [{ delta: { content } }] 
+                id: requestId,
+                object: "chat.completion.chunk",
+                created: Math.floor(Date.now() / 1000),
+                model: "null",
+                choices: [{ 
+                  index: 0,
+                  delta: { content },
+                  finish_reason: null
+                }] 
               })}\n\n`;
               controller.enqueue(encoder.encode(data));
             }
           }
+          
+          // Send final chunk with finish_reason
+          const finalData = `data: ${JSON.stringify({
+            id: requestId,
+            object: "chat.completion.chunk", 
+            created: Math.floor(Date.now() / 1000),
+            model: model,
+            choices: [{
+              index: 0,
+              delta: {},
+              finish_reason: "stop"
+            }]
+          })}\n\n`;
+          controller.enqueue(encoder.encode(finalData));
+          
           controller.close();
         } catch (error) {
           console.error('Stream error:', error);

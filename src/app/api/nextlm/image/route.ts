@@ -32,7 +32,7 @@ async function enhancePrompt(originalPrompt: string): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, model = 'nextlm-image-1' } = await request.json();
 
     if (!prompt) {
       return NextResponse.json(
@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Generate fake IDs
+    const generateId = () => `img_${Math.random().toString(36).substr(2, 9)}${Date.now().toString(36)}`;
+    const requestId = generateId();
 
     // Enhance the prompt for better results
     const enhancedPrompt = await enhancePrompt(prompt);
@@ -64,6 +68,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
+      id: requestId,
+      object: "image.generation",
+      created: Math.floor(Date.now() / 1000),
+      model: "null",
       success: true,
       imageBase64: imageData.b64_json,
       enhancedPrompt: enhancedPrompt,
